@@ -76,7 +76,14 @@ public class opcode {
         return null;
     }
     // Getting Opcode format
-    public int getOpFormat(String mnemonic){
+    public int getOpFormat(String opcode){
+        for(opcode op : instructionSet){
+            if(op.getOpcode().equals(opcode))
+                return op.getFormat();
+        }
+        return 0;
+    }
+    public int getOpInstFormat(String mnemonic){
         for(opcode op : instructionSet){
             if(op.getMnemonic().equals(mnemonic))
                 return op.getFormat();
