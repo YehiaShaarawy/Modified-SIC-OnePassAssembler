@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 public class onepassasm {
     boolean flag = false;
+    int textRecordLength = 0;
     opcode op = new opcode();
     symbolTable sym = new symbolTable();
     locationCounter lc = new locationCounter();
@@ -35,14 +36,8 @@ public class onepassasm {
         lc.initializeLocCtr(Integer.parseInt(startingAddress,16)); //initializing the location counter
         HteWriter.write("H"+String.format("%6s", programName).replace(' ', 'X')+String.format("%06d",Integer.parseInt(lc.getLocCtr()))+String.format("%06X\n",0));
     }
-    private void textRecordAssembler(int row) throws IOException {
-        String label = assemblyCode.get(row).substring(0,6).toUpperCase();
-        String instruction = assemblyCode.get(row).substring(6,11).toUpperCase();
-        String opcode = op.getOpOpcode(instruction);
-        int format = op.getOpInstFormat(instruction);
-        String operand = assemblyCode.get(row).substring(12).toUpperCase();
-        String objectcodeHex = "";
-        //Writing the text record
+
+    private void generateTextRecord(){
         if(!flag){
             textRecord.append("T"+String.format("%06X",Integer.parseInt(lc.getLocCtr(),16)));
             flag = true;
@@ -50,9 +45,19 @@ public class onepassasm {
         else {
             System.out.println("TRUE");
         }
-
-
         System.out.println("Text Record -> "+textRecord);
+    }
+
+    private void textRecordAssembler(int row) throws IOException {
+        String label = assemblyCode.get(row).substring(0,6).toUpperCase();
+        String instruction = assemblyCode.get(row).substring(6,11).toUpperCase();
+        String opcode = op.getOpOpcode(instruction);
+        int format = op.getOpInstFormat(instruction);
+        String operand = assemblyCode.get(row).substring(12).toUpperCase();
+        String objectcodeHex = "";
+
+        //Writing the text record
+        generateTextRecord();
 
         //Writing label to symbolTable
         if(label.equals("      "))
@@ -67,6 +72,7 @@ public class onepassasm {
         //Writing Object code
         if(instruction.equals("BYTE ")){
             if (assemblyCode.get(row).charAt(12) == 'C'){
+                textRecordLength += assemblyCode.get(row).substring(14, assemblyCode.get(row).length() - 1).length();
                 String characters = assemblyCode.get(row).substring(14, assemblyCode.get(row).length() - 1);
                 for (int i = 0; i < characters.length(); i++) {
                     char character = characters.charAt(i);
@@ -77,14 +83,21 @@ public class onepassasm {
                 textRecord.append(objectcodeHex);
             }
             else if (assemblyCode.get(row).charAt(12) == 'X') {
+                textRecordLength += assemblyCode.get(row).substring(14, assemblyCode.get(row).length() - 1).length();
                 objectcodeHex = assemblyCode.get(row).substring(14, assemblyCode.get(row).length() - 1);
                 System.out.println(objectcodeHex);
                 textRecord.append(objectcodeHex);
             }
         } else if (instruction.equals("WORD ")) {
+            textRecordLength +=3;
             objectcodeHex = String.format("%06X",Integer.parseInt(operand));
             textRecord.append(objectcodeHex);
             System.out.println("OBJECT CODE WORD: "+objectcodeHex);
+        } else if (instruction.equals("RESW ")||instruction.equals("RESB ")) {
+            //skipping object code and adding a new text record and adding the length of text record
+
+        } else {
+            textRecordLength +=3;
         }
 
 //        //Object code generation
@@ -92,6 +105,7 @@ public class onepassasm {
 //
 //
 //
+        System.out.println("Text record length ->"+textRecordLength);
         System.out.println(lc.getLocCtr()+"\t"+label+"\t"+instruction+"\t"+operand+"\t"+objectcodeHex+"\t"+opcode+"\t"+format);
         AsmWriter.write(lc.getLocCtr()+"\t"+label+"\t"+instruction+"\t"+operand+"\t"+objectcodeHex+"\t"+opcode+"\t"+format+"\n");
         AsmWriter.flush();
