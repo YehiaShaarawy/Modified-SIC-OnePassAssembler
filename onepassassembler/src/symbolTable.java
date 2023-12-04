@@ -17,6 +17,15 @@ public class symbolTable {
         return " ";
     }
 
+    public String getSymbol(String symbol){
+        if(symbolTab.containsKey(symbol))
+            return symbolTab.get(symbol).getData();
+        else{
+            System.out.println("Symbol not found in symbol table");
+            return null;
+        }
+    }
+
     private static boolean locationExistsInLinkedList(String location, listNode head) {
         listNode current = head;
         while (current != null) {

@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class onepassasm {
     boolean flag = false;
@@ -13,12 +14,12 @@ public class onepassasm {
     symbolTable sym = new symbolTable();
     locationCounter lc = new locationCounter();
     StringBuilder textRecord = new StringBuilder();
+    List<String> textRecords = new ArrayList<>();
     private ArrayList<String> assemblyCode = new ArrayList<>();
     private String AssemblyFilePath = "src/full.txt";
     private String HTEFilePath = "src/objectcode.txt";
     private String SymbolTableFilePath = "src/symbolTable.txt";
     private BufferedReader AsmReader;
-
     private BufferedWriter AsmWriter = new BufferedWriter(new FileWriter("src/assembly.txt"));
     private BufferedWriter HteWriter = new BufferedWriter(new FileWriter(HTEFilePath));
     private BufferedWriter SymbolWriter = new BufferedWriter(new FileWriter(SymbolTableFilePath));
@@ -48,6 +49,7 @@ public class onepassasm {
         System.out.println("Text Record -> "+textRecord);
     }
 
+
     private void textRecordAssembler(int row) throws IOException {
         String label = assemblyCode.get(row).substring(0,6).toUpperCase();
         String instruction = assemblyCode.get(row).substring(6,11).toUpperCase();
@@ -55,6 +57,9 @@ public class onepassasm {
         int format = op.getOpInstFormat(instruction);
         String operand = assemblyCode.get(row).substring(12).toUpperCase();
         String objectcodeHex = "";
+
+//        System.out.println(opcode.substring(0,7));
+//        System.out.println("OPCODE IN BINARY ->"+ Long.toBinaryString(Long.parseLong(opcode, 16)).substring(0, 7));
 
         //Writing the text record
         generateTextRecord();
@@ -79,13 +84,13 @@ public class onepassasm {
                     String hexRepresentation = Integer.toHexString(character).toUpperCase();
                     objectcodeHex += hexRepresentation;
                 }
-                System.out.println(objectcodeHex);
+                System.out.println("OBJECT CODE C: "+objectcodeHex);
                 textRecord.append(objectcodeHex);
             }
             else if (assemblyCode.get(row).charAt(12) == 'X') {
                 textRecordLength += assemblyCode.get(row).substring(14, assemblyCode.get(row).length() - 1).length();
                 objectcodeHex = assemblyCode.get(row).substring(14, assemblyCode.get(row).length() - 1);
-                System.out.println(objectcodeHex);
+                System.out.println("OBJECT CODE X: "+objectcodeHex);
                 textRecord.append(objectcodeHex);
             }
         } else if (instruction.equals("WORD ")) {
@@ -93,18 +98,65 @@ public class onepassasm {
             objectcodeHex = String.format("%06X",Integer.parseInt(operand));
             textRecord.append(objectcodeHex);
             System.out.println("OBJECT CODE WORD: "+objectcodeHex);
-        } else if (instruction.equals("RESW ")||instruction.equals("RESB ")) {
-            //skipping object code and adding a new text record and adding the length of text record
-
+        }else if (instruction.equals("RESW ")||instruction.equals("RESB ")){
+//            skipping object code and adding a new text record and adding the length of text record
+//            if(textRecord.length()>0){
+//                textRecord.insert(7,String.format("%02X",textRecordLength));
+//                textRecords.add(textRecord.toString());
+//                textRecord = new StringBuilder();
+//            }
+        } else if (instruction.equals("RSUB ")) {
+            textRecordLength +=3;
+            objectcodeHex = "4C0000";
+            textRecord.append(objectcodeHex);
+            System.out.println("OBJECT CODE RSUB: "+objectcodeHex);
         } else {
             textRecordLength +=3;
+            if(format == 1){
+                objectcodeHex = opcode;
+            } else if (format ==3) {
+                //Converting opcode to binary
+                String opcodeBinary = String.format("%07d",Long.parseLong(Long.toBinaryString(Long.parseLong(opcode,16))));
+                System.out.println("BEFORE"+opcodeBinary);
+                //Checking the immediate value
+                if(operand.substring(0,1).equals("#"))
+                    opcodeBinary = opcodeBinary.substring(0,6)+'1'+opcodeBinary.substring(7);
+                else
+                    opcodeBinary = opcodeBinary.substring(0,6)+'0'+opcodeBinary.substring(7);
+                System.out.println("after"+opcodeBinary);
+                //checking the index
+                String opcodeIndex ="";
+                if(operand.split(",").length>1)
+                    opcodeIndex = opcodeBinary +'1';
+                else
+                    opcodeIndex = opcodeBinary +'0';
+                //Format 3, immediate
+                if(operand.substring(0,1).equals("#")){
+                    String immediate = String.format("%015d",Long.parseLong(Long.toBinaryString(Long.parseLong(operand.substring(1,2),16))));
+                    String opjectcodeBinary = opcodeIndex + immediate;
+                    System.out.println(immediate);
+                    objectcodeHex = String.format("%06d", Integer.parseInt(Integer.toHexString(Integer.parseInt(opjectcodeBinary,2)).toUpperCase()));
+                    System.out.println("# OBJECT CODE ->"+objectcodeHex);
+                } else if (operand.substring(6,7).equals(",")) { //Format 3 , Indexing
+                    String address = sym.getSymbol(operand.substring(0,6));
+                    String addressBinary = String.format("%015d",Long.parseLong(Long.toBinaryString(Long.parseLong(address,16))));
+                    String opjectcodeBinary = opcodeIndex + addressBinary;
+                    objectcodeHex = Integer.toHexString(Integer.parseInt(opjectcodeBinary,2)).toUpperCase();
+                    System.out.println("INDEX OBJECT CODE ->"+objectcodeHex);
+                } else{ //Normal Format  3
+
+                }
+            }
+//            System.out.println(opcode+" IN BINARY ->"+ String.format("%07d",Long.parseLong(Long.toBinaryString(Long.parseLong(opcode,16)))));
+            System.out.println(operand.substring(6,7).equals(","));// cehcks for indexing
+            System.out.println(operand.split(",").length);// cehcks for indexing
+            System.out.println(operand.substring(0,1).equals("#"));// checks for immidiate
         }
 
-//        //Object code generation
-//        //Check of format first and therfore will be assed by its function
-//
-//
-//
+
+
+
+
         System.out.println("Text record length ->"+textRecordLength);
         System.out.println(lc.getLocCtr()+"\t"+label+"\t"+instruction+"\t"+operand+"\t"+objectcodeHex+"\t"+opcode+"\t"+format);
         AsmWriter.write(lc.getLocCtr()+"\t"+label+"\t"+instruction+"\t"+operand+"\t"+objectcodeHex+"\t"+opcode+"\t"+format+"\n");
