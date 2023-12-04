@@ -144,7 +144,8 @@ public class onepassasm {
                     objectcodeHex = Integer.toHexString(Integer.parseInt(opjectcodeBinary,2)).toUpperCase();
                     System.out.println("INDEX OBJECT CODE ->"+objectcodeHex);
                 } else{ //Normal Format  3
-
+                    String address = sym.getSymbol(operand.substring(0,6));
+                    objectcodeHex = opcode + address;
                 }
             }
 //            System.out.println(opcode+" IN BINARY ->"+ String.format("%07d",Long.parseLong(Long.toBinaryString(Long.parseLong(opcode,16)))));
