@@ -9,6 +9,7 @@ public class Main {
         onepassasm asm = new onepassasm();
         asm.assemble();
 
+//        System.out.println(Integer.toHexString(Integer.parseInt("201B",16)+1).toUpperCase());
 
 //        String test = Integer.toHexString(Integer.parseInt("10101001001000000001111",2)).toUpperCase();
 //        System.out.println(test);

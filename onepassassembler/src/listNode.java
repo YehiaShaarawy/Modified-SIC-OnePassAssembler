@@ -1,13 +1,15 @@
 public class listNode {
     private String data;
     private listNode next;
-
+    public listNode(){}
     public String getData() {
         return data;
     }
-
     public listNode getNext() {
         return next;
+    }
+    public void setData(String data){
+        this.data = data;
     }
     public void setNext(listNode next) {
         this.next = next;
@@ -16,7 +18,6 @@ public class listNode {
         this.data= data;
         this.next = null;
     }
-
     @Override
     public String toString() {
         return "listNode{" +
