@@ -1,20 +1,17 @@
 import java.io.*;
-import java.sql.SQLOutput;
 import java.util.ArrayList;
 import java.util.List;
 
 public class onepassasm {
-    boolean createTStartAdd = false;
-    String firstInstructionAddress ="";
-    boolean newTextRecord = false;
-    int tRecordSkipped =0;
-    int textRecordLength = 0;
-    String maskingBitBinary ="";
-    opcode op = new opcode();
-    symbolTable sym = new symbolTable();
-    locationCounter lc = new locationCounter();
+    private boolean createTStartAdd = false, newTextRecord = false;
+    private String startingAddress = "", startingInstruction = "", firstInstructionAddress ="", maskingBitBinary ="";
+    private int tRecordSkipped = 0 , textRecordLength = 0;
+    private opcode op = new opcode();
+    private symbolTable sym = new symbolTable();
+    private locationCounter lc = new locationCounter();
+    private StringBuilder headerRecord = new StringBuilder();
     private StringBuilder textRecord = new StringBuilder();
-    List<String> textRecords = new ArrayList<>();
+    private List<String> TextRecords = new ArrayList<>();
     private ArrayList<String> assemblyCode = new ArrayList<>();
     private String AssemblyFilePath = "src/full.txt";
     private String HTEFilePath = "src/objectcode.txt";
@@ -32,18 +29,15 @@ public class onepassasm {
     }
     private void headerRecordAssembler(int row) throws IOException {
         String programName = assemblyCode.get(row).substring(0,6).toUpperCase();
-        String startingAddress = assemblyCode.get(row).substring(12,16); //setting the starting address
+        startingAddress = assemblyCode.get(row).substring(12,16); //setting the starting address
         insertToSYMTAB(programName,startingAddress);
         lc.initializeLocCtr(Integer.parseInt(startingAddress,16)); //initializing the location counter
-        HteWriter.write("H"+String.format("%6s", programName).replace(' ', 'X')+String.format("%06d",Integer.parseInt(lc.getLocCtr()))+"Append at the end record");
+        headerRecord.append("H"+String.format("%6s", programName).replace(' ', 'X')+String.format("%06d",Integer.parseInt(lc.getLocCtr())));
     }
 
-
     private void newTRecord(){
-//        System.out.println("INSIDE");
-        createTStartAdd=false; //so it doesnt create a new T.starting address.
-//        System.out.println(textRecords);
-        textRecords.add(textRecord.toString()); //<--
+        createTStartAdd=false; //so it doesn't create a new T.starting address.
+        TextRecords.add(textRecord.toString());
         textRecord = new StringBuilder();
         generateStartTextRecord();
         tRecordSkipped=0;
@@ -52,8 +46,9 @@ public class onepassasm {
     }
     public void cutTRecord(){
         if (!newTextRecord){ // On the same T record, we calculate the length of the t record and add it to List which will hold all t records and start a new T record.
-            textRecord.insert(7,String.format("%02X",Integer.parseInt(Integer.toString(Integer.parseInt(lc.getLocCtr(),16)-Integer.parseInt(firstInstructionAddress,16))),16));
-            textRecords.add(textRecord.toString());
+            textRecord.insert(7,String.format("%02X",Integer.parseInt(Integer.toString(Integer.parseInt(lc.getLocCtr(),16)-Integer.parseInt(firstInstructionAddress,16))),16)); // inserting the T record Length
+            textRecord.insert(9,Integer.toHexString(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)).toUpperCase()); // inserting the masking bit
+            TextRecords.add(textRecord.toString());
             textRecord = new StringBuilder();
             createTStartAdd = true;
         }
@@ -62,40 +57,35 @@ public class onepassasm {
     }
     private void generateStartTextRecord(){
         if(!createTStartAdd){ //if createTStartAdd is false which means that it's ready to generate T.starting address.
-//            System.out.println("Generating First T record ->"+ "T"+String.format("%06X",Integer.parseInt(lc.getLocCtr(),16)));
             textRecord.append("T"+String.format("%06X",Integer.parseInt(lc.getLocCtr(),16)));
             firstInstructionAddress = lc.getLocCtr(); //getting the locationCounter of first instruction for getting the length of the t record.
-            createTStartAdd = true; //setting it to true so it doesn't create a new first T record.
+            createTStartAdd = true; //setting it to true,so it doesn't create a new first T record.
         }
     }
-
-
     private void generateTextRecord(String instruction){
         generateStartTextRecord(); //writing the first T record -> T.starting address.
 
         if(instruction.equals("RESW ")||instruction.equals("RESB ")){
-//            System.out.println("found RESW/RESB");
             tRecordSkipped++; // skip variable increments how many times resw or resb has been skipped do it doesnt create a new t record [future case].
             cutTRecord();
         }
-        //Counter bits/textrecordlength = textrecord length w myzdshg 3n 30 approx 1E
-        //Counter bits must 0 w flag true w mykonsh resw /resb
-        //Text record
 
         if(!(instruction.equals("RESW ")||instruction.equals("RESB "))&&(tRecordSkipped>0)&&newTextRecord&&textRecordLength==0){ //if instruction isn't RESW / RESB, and check if there are skips and its read for new T record and making sure that the text record length is zero, Therefore creates a new T record.
-//            System.out.println("new text record at address : "+lc.getLocCtr());
             newTRecord();
+            startingInstruction = lc.getLocCtr(); // for E record starting program
+//            System.out.println("Masking bits ->"+maskingBitBinary +"\t\t"+ Integer.toHexString(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)).toUpperCase());
+            maskingBitBinary = "";
         }
 
         if(!(instruction.equals("RESW ")||instruction.equals("RESB "))&&(tRecordSkipped==0)&&textRecordLength>27){
-            textRecord.insert(7,String.format("%02X",Integer.parseInt(Integer.toString(Integer.parseInt(lc.getLocCtr(),16)-Integer.parseInt(firstInstructionAddress,16))),16));
+            textRecord.insert(7,String.format("%02X",Integer.parseInt(Integer.toString(Integer.parseInt(lc.getLocCtr(),16)-Integer.parseInt(firstInstructionAddress,16))),16)); // inserting the T record Length
+            textRecord.insert(9,Integer.toHexString(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)).toUpperCase()); // inserting the masking bit
             newTRecord();
+//            System.out.println("Masking bits ->"+maskingBitBinary+"\t\t"+ Integer.toHexString(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)).toUpperCase());
+            maskingBitBinary = "";
         }
-//        System.out.println("TEXT RECORD LENGTH "+textRecordLength);
-//        System.out.println("ENNNNDD"+textRecords);
-//        System.out.println("Text Record -> "+textRecord);
+        System.out.println("Text Record -> "+textRecord);
     }
-
     private void textRecordAssembler(int row) throws IOException {
         String label = assemblyCode.get(row).substring(0,6).toUpperCase();
         String instruction = assemblyCode.get(row).substring(6,11).toUpperCase();
@@ -111,17 +101,15 @@ public class onepassasm {
         if(label.equals("      "))
             label = "      ";
         else{
-            sym.addSymbol(label,lc.getLocCtr(),textRecords);
+            sym.addSymbol(label,lc.getLocCtr(),TextRecords);
             if(sym.cut){
                 cutTRecord();
                 newTRecord();
+                maskingBitBinary = "";
                 sym.cut = false;
             }
             insertToSYMTAB(label,lc.getLocCtr());
         }
-
-//        System.out.println("Text Record length ->"+textRecordLength);
-//        System.out.println("Text Record After ->"+textRecord);
 
         //Writing Object Code
         if(instruction.equals("BYTE ")){
@@ -187,14 +175,14 @@ public class onepassasm {
                     textRecord.append(objectcodeHex);
 //                    System.out.println("# OBJECT CODE ->"+objectcodeHex);
                 } else if (operand.substring(6,7).equals(",")) { //Format 3 , Indexing object code
-                    String address = sym.getOperand(operand.substring(0,6),lc.getLocCtr(),textRecords);
+                    String address = sym.getOperand(operand.substring(0,6),lc.getLocCtr(),TextRecords);
                     String addressBinary = String.format("%015d",Long.parseLong(Long.toBinaryString(Long.parseLong(address,16))));
                     String opjectcodeBinary = opcodeIndex + addressBinary;
                     objectcodeHex = Integer.toHexString(Integer.parseInt(opjectcodeBinary,2)).toUpperCase();
                     textRecord.append(objectcodeHex);
 //                    System.out.println("INDEX OBJECT CODE ->"+objectcodeHex);
                 } else{ //Normal Format  3 object code
-                    String address = sym.getOperand(operand.substring(0,6),lc.getLocCtr(),textRecords);
+                    String address = sym.getOperand(operand.substring(0,6),lc.getLocCtr(),TextRecords);
                     objectcodeHex = opcode + address;
                     textRecord.append(objectcodeHex);
                 }
@@ -204,6 +192,7 @@ public class onepassasm {
         System.out.println(lc.getLocCtr()+"\t"+label+"\t"+instruction+"\t"+operand+"\t"+objectcodeHex);
         AsmWriter.write(lc.getLocCtr()+"\t"+label+"\t"+instruction+"\t"+operand+"\t"+objectcodeHex+"\n");
         AsmWriter.flush();
+
         //Writing Location Counter
         switch (instruction) {
             case "BYTE " -> {
@@ -217,13 +206,24 @@ public class onepassasm {
             case "RESB " -> lc.incrementLocCtr_Byte(Integer.parseInt(assemblyCode.get(row).substring(12)));
             default -> lc.incrementLocCtr(opcode);
         }
-        System.out.println("Text Record After ->"+textRecord);
-        System.out.println("================================================================================");
     }
+
     private void endRecordAssembler(int row) throws IOException{
-        cutTRecord();
-        System.out.println("Text Records After ->"+textRecords);
-        System.out.println("ENDDD at : "+lc.getLocCtr()); // calculate the length of the program and append it to hRecord
+        cutTRecord(); // cutting the last t record to be added to the textRecords
+        //Adding H record
+        headerRecord.append(String.format("%06X",Integer.parseInt(lc.getLocCtr(),16) - Integer.parseInt(startingAddress,16),16).toUpperCase());// calculate the length of the program and append it to hRecord
+//        System.out.println(headerRecord);
+        HteWriter.write(headerRecord.toString()+"\n");
+        //Adding T record
+        for(String k: TextRecords){
+            if(k.length()>10) {
+//                System.out.println(k);
+                HteWriter.write(k+"\n");
+            }
+        }
+        //Adding E record
+        HteWriter.write("E"+ String.format("%06X",Integer.parseInt(startingInstruction,16)));
+//        System.out.println("E"+ String.format("%06X",Integer.parseInt(startingInstruction,16)));
     }
 
     private void openFile(){
@@ -251,8 +251,8 @@ public class onepassasm {
                     default -> textRecordAssembler(i);
                 }
             }
-            System.out.println(sym.getSymbolTable());
-            System.out.println(textRecords);
+//            System.out.println("Symbol Table ->"+sym.getSymbolTable());
+//            System.out.println("All Text Records ->"+TextRecords);
             System.out.println("Successfully assembled Assembly code");
         }catch (Exception e){
             System.out.println("Error in assembling Assembly file at "+e);

@@ -8,9 +8,6 @@ public class listNode {
     public listNode getNext() {
         return next;
     }
-    public void setData(String data){
-        this.data = data;
-    }
     public void setNext(listNode next) {
         this.next = next;
     }
