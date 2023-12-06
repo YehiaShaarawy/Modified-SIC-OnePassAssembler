@@ -1,10 +1,14 @@
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class symbolTable {
+public class symbolTable{
+    Boolean cut = false;
     listNode newNode = new listNode();
     listNode lastNode = new listNode();
     private static Map<String,listNode> symbolTab = new HashMap<>();
+
     public static Map<String,listNode> getSymbolTable(){
         return symbolTab;
     }
@@ -53,8 +57,7 @@ public class symbolTable {
         }
     }
 
-    public String getOperand(String operand, String location){  //Forward Referencing
-        System.out.println(symbolTab.containsKey(operand));
+    public String getOperand(String operand, String location, List<String> textRecords){  //Forward Referencing
         if(symbolTab.containsKey(operand)){ //checking if operand is in the symbolTable
             if(symbolTab.get(operand).getData()!=null) // if so, it's data isn't null then return the data
                 return symbolTab.get(operand).getData();
@@ -81,7 +84,12 @@ public class symbolTable {
         return node;
     }
 
-    public void addSymbol(String symbol, String location){
+    public void cutRecord(){
+        cut = true;
+    }
+
+
+    public void addSymbol(String symbol, String location, List<String> textRecords){
         for (String sym : symbolTab.keySet()) // if symbol matches the address, return symbol
             if(symbolTab.get(sym).equals(location))
                 return;
@@ -92,6 +100,9 @@ public class symbolTable {
                 nodeCount++;
                 if(currentNode.getNext()!=null){
                     currentNode = currentNode.getNext();
+                    //Cut t record w
+                    cutRecord();
+                    textRecords.add("T^"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"^02^"+location);
                     System.out.println("T^"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"^02^"+location); //<-- TEXT RECORD
                 }else{
                     break;
