@@ -59,14 +59,6 @@ public class opcode {
         instructionSet.add(new opcode("SIO  ","F0",1));
         instructionSet.add(new opcode("TIO  ","F8",1));
     }
-    // Getting Opcode Mnemonic
-    public String getOpMnemonic(String opcode){
-        for(opcode op : instructionSet){
-            if(op.getOpcode().equals(opcode))
-                return op.getMnemonic();
-        }
-        return null;
-    }
     // Getting Opcode
     public String getOpOpcode(String mnemonic){
         for (opcode op : instructionSet){
@@ -89,9 +81,5 @@ public class opcode {
                 return op.getFormat();
         }
         return 0;
-    }
-    // Extract the value of a specific bit in an integer at a given position. The result will be 0 if the bit is originally 0 and 1 if the bit is originally 1 at the specified position.
-    public int getOpBit(int input, int position){
-        return (input>>position)&1;
     }
 }
