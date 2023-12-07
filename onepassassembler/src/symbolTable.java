@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ public class symbolTable{
     listNode lastNode = new listNode();
     listNode currentNode;
     private static Map<String,listNode> symbolTab = new HashMap<>();
+    public ArrayList<String> ForwardReferencing = new ArrayList<>();
     public static Map<String,listNode> getSymbolTable(){
         return symbolTab;
     }
@@ -16,7 +18,7 @@ public class symbolTable{
         if(symbolTab.containsKey(operand)){ //checking if operand is in the symbolTable
             if(symbolTab.get(operand).getData()!=null) // if so, it's data isn't null then return the data
                 return symbolTab.get(operand).getData();
-            else{ //if data is null, then create a new node with the location +1 for modification , getting the last node of that operand and connecting the last node t the new node
+            else{ //if data is null, then create a new node with the location +1 for modification , getting the last node of that operand and connecting the last node to the new node
                 newNode = new listNode(Integer.toHexString(Integer.parseInt(location,16)+1).toUpperCase());
                 lastNode = getLastNode(symbolTab.get(operand));
                 lastNode.setNext(newNode);
@@ -46,14 +48,14 @@ public class symbolTable{
         for (String sym : symbolTab.keySet()) // if symbol matches the address, return symbol
             if(symbolTab.get(sym).equals(location))
                 return;
-        if(symbolTab.get(symbol)!=null&&symbolTab.get(symbol).getData()==null){ //Checking if label was in the linked list, if so, Creates A NEW T record -> "T^symbol second node in 6 bits^02^location"
+        if(symbolTab.get(symbol)!=null&&symbolTab.get(symbol).getData()==null){ //Checking if label was in the linked list, if so, Creates A NEW T record -> "T^symbol second node in 6 bits^02000^location"
             currentNode =symbolTab.get(symbol);
             while(currentNode!=null){ //Forward Referencing
                 if(currentNode.getNext()!=null){
                     currentNode = currentNode.getNext();
                     cutRecord();
-                    textRecords.add("T"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"02000"+location);
-//                    System.out.println("T^"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"^02^"+location); //<-- TEXT RECORD
+                    ForwardReferencing.add("T"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"02000"+location); // for writing in the textRecords correctly
+//                    System.out.println("T^"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"^0200^"+location); //<-- TEXT RECORD
                 }else{
                     break;
                 }
