@@ -52,7 +52,7 @@ public class symbolTable{
                 if(currentNode.getNext()!=null){
                     currentNode = currentNode.getNext();
                     cutRecord();
-                    textRecords.add("T"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"02"+location);
+                    textRecords.add("T"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"02000"+location);
 //                    System.out.println("T^"+String.format("%06X",Integer.parseInt(currentNode.getData(),16))+"^02^"+location); //<-- TEXT RECORD
                 }else{
                     break;
