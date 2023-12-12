@@ -48,7 +48,10 @@ public class onepassasm {
 //        System.out.println("Masking bits ->"+maskingBitBinary +"\t\t"+ Integer.toHexString(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)).toUpperCase());
         if (!newTextRecord){ // On the same T record, we calculate the length of the t record and add it to List which will hold all t records and start a new T record.
             textRecord.insert(7,String.format("%02X",Integer.parseInt(Integer.toString(Integer.parseInt(lc.getLocCtr(),16)-Integer.parseInt(firstInstructionAddress,16))),16)); // inserting the T record Length
-            textRecord.insert(9,Integer.toHexString(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)).toUpperCase()); // inserting the masking bit
+            if(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2) == 0)
+                textRecord.insert(9,String.format("%03d",Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)));
+            else
+                textRecord.insert(9,Integer.toHexString(Integer.parseInt(String.format("%-" + 12 + "s", maskingBitBinary).replace(' ', '0'),2)).toUpperCase()); // inserting the masking bit
             TextRecords.add(textRecord.toString());
             textRecord = new StringBuilder();
             createTStartAdd = true;
@@ -160,7 +163,7 @@ public class onepassasm {
                 objectcodeHex = opcode;
                 textRecord.append(objectcodeHex);
             }else if (format ==3) {
-                maskingBitBinary += "1";
+//                maskingBitBinary += "1";
                 textRecordLength +=3;
                 //Converting opcode to binary
                 String opcodeBinary = String.format("%07d",Long.parseLong(Long.toBinaryString(Long.parseLong(opcode,16))));
@@ -177,19 +180,22 @@ public class onepassasm {
                     opcodeIndex = opcodeBinary +'0';
                 //Format 3, immediate object code
                 if(operand.substring(0,1).equals("#")){
+                    maskingBitBinary += "0";
                     String immediate = String.format("%015d",Long.parseLong(Long.toBinaryString(Long.parseLong(operand.substring(1,2),16))));
                     String opjectcodeBinary = opcodeIndex + immediate;
                     objectcodeHex = String.format("%06d", Integer.parseInt(Integer.toHexString(Integer.parseInt(opjectcodeBinary,2)).toUpperCase()));
                     textRecord.append(objectcodeHex);
 //                    System.out.println("# OBJECT CODE ->"+objectcodeHex);
                 } else if (operand.substring(6,7).equals(",")) { //Format 3 , Indexing object code
+                    maskingBitBinary += "1";
                     String address = sym.getOperand(operand.substring(0,6),lc.getLocCtr(),TextRecords);
                     String addressBinary = String.format("%015d",Long.parseLong(Long.toBinaryString(Long.parseLong(address,16))));
                     String opjectcodeBinary = opcodeIndex + addressBinary;
                     objectcodeHex = Integer.toHexString(Integer.parseInt(opjectcodeBinary,2)).toUpperCase();
                     textRecord.append(objectcodeHex);
 //                    System.out.println("INDEX OBJECT CODE ->"+objectcodeHex);
-                } else{ //Normal Format  3 object code
+                } else{//Normal Format  3 object code
+                    maskingBitBinary += "1";
                     String address = sym.getOperand(operand.substring(0,6),lc.getLocCtr(),TextRecords);
                     objectcodeHex = opcode + address;
                     textRecord.append(objectcodeHex);
